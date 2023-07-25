@@ -66,9 +66,7 @@ if __name__ == '__main__':
 
             # Generate fake image batch with Generator
             noise = torch.randn(b_size, nz, 1, 1, device=device)
-            fake_labels = torch.randint(0, num_classes, (b_size,), device=device).long()
-            # label_embeddings_fake = torch.eye(num_classes)[fake_labels].to(device)
-            # fake = G(noise, label_embeddings_fake) # TODO
+            fake_labels = torch.randint(0, num_classes, (b_size,), dtype=torch.long, device=device)
             fake = G(noise, fake_labels)
 
             # Classify all fake batch with Discriminator
@@ -105,16 +103,15 @@ if __name__ == '__main__':
         if epoch % 1 == 0:  # save images every 5 epochs (adjust as necessary)
             # Prepare directory
             now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-            dir_path = os.path.join('./output', f'{now}_epoch_{epoch}')
+            dir_path = os.path.join('./output', f'{now}_epoch_{epoch + 1}')
             os.makedirs(dir_path, exist_ok=True)
 
             with torch.no_grad():
                 for letter_index in range(num_classes):
                     for i in range(4):  # generate four of each letter
                         noise = torch.randn(1, nz, 1, 1, device=device)
-                        labels = torch.full((1,), letter_index, device=device)
-                        label_embeddings = torch.eye(num_classes)[labels].to(device)
-                        fake = G(noise, label_embeddings)
+                        labels = torch.full((1,), letter_index, dtype=torch.long, device=device)
+                        fake = G(noise, labels)
                         save_image(fake.detach(), os.path.join(dir_path, f'{chr(97 + letter_index)}_{i + 1}.png'))
     now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     torch.save(G.state_dict(), f'G_{now}.pth')
