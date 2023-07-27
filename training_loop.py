@@ -31,9 +31,11 @@ betas = (0.5, 0.999)  # beta1 and beta2 for Adam optimizer
 optimizerD = optim.Adam(D.parameters(), lr=lr_d, betas=betas)
 optimizerG = optim.Adam(G.parameters(), lr=lr_g, betas=betas)
 
-# Number of training epochs
-num_epochs = 10000 # stop when we feel like it
-# Stochastic gradient descent batch size
+# Number of training epochs. Note that the model
+# is saved regularly, so in practice I'll just
+# stop training when I decide to
+num_epochs = 1000000000
+# Mini-batch stochastic gradient descent batch size
 batch_size = 64
 
 # Save samples from generator every _ epochs
@@ -51,39 +53,39 @@ if __name__ == '__main__':
     now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     out_dir_path = os.path.join('./output', f'results_{now}')
     os.makedirs(out_dir_path, exist_ok=False)
-    # Training loop
+
+    # An epoch goes through the entire training set.
+    # There are 2400 of each letter class, making 62400 total real training images.
     for epoch in range(num_epochs):
         errG, errD = None, None
         pbar = tqdm(data_loader)
+        # Load data in batches of `batch_size`
         for i, (images, labels) in enumerate(pbar):
             pbar.set_description(f"Epoch {epoch + 1}")
+            # Zero out the gradient for the discriminator
             D.zero_grad()
-            # Format batch
-            # real_images = images.to(device)  # TODO
+            # Format real image batch
             real_images = images.unsqueeze(1).to(device)
             b_size = real_images.size(0)
             labels = labels.squeeze().long().to(device)
+
+            # Discriminate real images; calculate gradient for batch
             output = D(real_images, labels).view(-1)
-            # Pass REAL as the target for real images
             errD_real = criterion(output, torch.full((b_size,), REAL, dtype=torch.float, device=device))
             errD_real.backward()
-            D_x = output.mean().item()
 
             # Generate fake image batch with Generator
             noise = torch.randn(b_size, nz, 1, 1, device=device)
             fake_labels = torch.randint(0, num_classes, (b_size,), dtype=torch.long, device=device)
             fake = G(noise, fake_labels)
 
-            # Classify all fake batch with Discriminator
+            # Discriminate the fake images; calculate gradient for batch
             output = D(fake.detach(), fake_labels).view(-1)
-            # Pass FAKE as the target for fake images
             errD_fake = criterion(output, torch.full((b_size,), FAKE, dtype=torch.float, device=device))
             errD_fake.backward()
-            D_G_z1 = output.mean().item()
 
-            # Add the gradients from the all-real and all-fake batches
+            # Combine gradients for real + fake for total loss
             errD = errD_real + errD_fake
-
             # Update Discriminator
             optimizerD.step()
 
@@ -91,8 +93,9 @@ if __name__ == '__main__':
             # Update Generator x times for each discriminator step
             ###########################
             for _ in range(1):
+                # Zero out generator gradient
                 G.zero_grad()
-                # Generate fake image batch with Generator
+                # Generate fake image batch
                 noise = torch.randn(b_size, nz, 1, 1, device=device)
                 fake_labels = torch.randint(0, num_classes, (b_size,), dtype=torch.long, device=device)
                 fake = G(noise, fake_labels)
@@ -108,14 +111,14 @@ if __name__ == '__main__':
         print(f"[{epoch + 1}/{num_epochs}] Loss_D: {errD.item()} Loss_G: {errG.item()}")
 
         if epoch % sample_generation_interval == 0:
-            # Prepare directory
+            # Create output directory
             now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             out_path = os.path.join(out_dir_path, f'{now}_epoch_{epoch + 1}')
             os.makedirs(out_path, exist_ok=False)
 
             with torch.no_grad():
                 for letter_index in range(num_classes):
-                    for i in range(4):  # generate four of each letter
+                    for i in range(6):  # generate samples of each letter
                         noise = torch.randn(1, nz, 1, 1, device=device)
                         labels = torch.full((1,), letter_index, dtype=torch.long, device=device)
                         fake = G(noise, labels)

@@ -1,3 +1,5 @@
+"""Utilities to load data"""
+
 from typing import Tuple
 
 import numpy as np
@@ -54,7 +56,6 @@ TRAINED_D_PATH = Path("./output/results_2023-07-25_15-45-51/2023-07-25_20-17-07_
 
 def get_trained_models() -> Tuple[Generator, Discriminator]:
     """Load a trained generator and discriminator"""
-    device = torch.device("cpu")
     G = Generator(nz, num_classes)
     D = Discriminator(num_classes)
 
