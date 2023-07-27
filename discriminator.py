@@ -1,3 +1,5 @@
+"""Discriminator model"""
+
 import torch
 from torch import nn
 
@@ -50,7 +52,7 @@ class Discriminator(nn.Module):
         # we have to reshape the label embeddings to be
         # the size of the input, so basically we have to
         # repeat it along the height and width so that
-        # equivalent information is given to the descriminator
+        # equivalent information is given to the discriminator
         # regarding classification
         c = c.expand(c.size(0), self.num_classes, 28, 28)
         x = torch.cat([input, c], 1)
